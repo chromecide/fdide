@@ -1,0 +1,226 @@
+{
+    "App": {
+        "name": "App",
+        "extend": "mesh",
+        "channels": [
+            {
+                "name": "MeshIn",
+                "type": "MeshIn",
+                "x": 20,
+                "y": 20
+            },
+            {
+                "name": "MeshOut",
+                "type": "MeshOut",
+                "x": 20,
+                "y": 660
+            },
+            {
+                "name": "WebServer",
+                "type": "http.server",
+                "host": null,
+                "port": "8081",
+                "x": 20,
+                "y": 220
+            },
+            {
+                "name": "HandleRequest",
+                "type": "HandleRequest",
+                "x": 20,
+                "y": 432
+            }
+        ],
+        "links": [
+            {
+                "name": "MeshIn",
+                "source": "entity",
+                "target": "WebServer"
+            },
+            {
+                "name": "WebServer",
+                "source": "entity",
+                "target": "HandleRequest"
+            },
+            {
+                "name": "HandleRequest",
+                "source": "entity",
+                "target": "MeshOut"
+            }
+        ],
+        "attributeLinks": [],
+        "scale": 1
+    },
+    "HandleRequest": {
+        "name": "HandleRequest",
+        "extend": "mesh",
+        "channels": [
+            {
+                "name": "MeshIn",
+                "type": "MeshIn",
+                "x": 20,
+                "y": 20
+            },
+            {
+                "name": "MeshOut",
+                "type": "MeshOut",
+                "x": 20,
+                "y": 660
+            },
+            {
+                "name": "getResponse",
+                "type": "get",
+                "attribute": "response",
+                "valuename": "response",
+                "x": 244,
+                "y": 185
+            },
+            {
+                "name": "GetContent",
+                "type": "GetRequestedContent",
+                "x": 408,
+                "y": 187
+            },
+            {
+                "name": "joinRespContent",
+                "type": "join",
+                "meshGlobal": true,
+                "x": 329,
+                "y": 392
+            },
+            {
+                "name": "SendContent",
+                "type": "http.writeresponse",
+                "x": 328,
+                "y": 575
+            }
+        ],
+        "links": [
+            {
+                "name": "MeshIn",
+                "source": "entity",
+                "target": "getResponse"
+            },
+            {
+                "name": "MeshIn",
+                "source": "entity",
+                "target": "GetContent"
+            },
+            {
+                "name": "GetContent",
+                "source": "entity",
+                "target": "joinRespContent"
+            },
+            {
+                "name": "getResponse",
+                "source": "entity",
+                "target": "joinRespContent"
+            },
+            {
+                "name": "joinRespContent",
+                "source": "entity",
+                "target": "SendContent"
+            }
+        ],
+        "attributeLinks": [],
+        "scale": 1
+    },
+    "GetRequestedContent": {
+        "name": "GetRequestedContent",
+        "extend": "mesh",
+        "channels": [
+            {
+                "name": "MeshIn",
+                "type": "MeshIn",
+                "x": 20,
+                "y": 20
+            },
+            {
+                "name": "MeshOut",
+                "type": "MeshOut",
+                "x": 20,
+                "y": 660
+            },
+            {
+                "name": "GetURL",
+                "type": "get",
+                "attribute": "request.url",
+                "valuename": "filename",
+                "x": 258,
+                "y": 120
+            },
+            {
+                "name": "PrependBaseDir",
+                "type": "Text.prepend",
+                "attribute": "filename",
+                "value": ".",
+                "x": 21,
+                "y": 241
+            },
+            {
+                "name": "IsRoot",
+                "type": "filter",
+                "query": {
+                    "attribute": "filename",
+                    "operator": "=",
+                    "value": "./"
+                },
+                "x": 268.5,
+                "y": 360.5000000000001
+            },
+            {
+                "name": "AddIndexHTML",
+                "type": "morph",
+                "map": {
+                    "filename": "./index.html"
+                },
+                "x": 40.75000000000003,
+                "y": 485.50000000000017
+            },
+            {
+                "name": "LoadFile",
+                "type": "filesystem.readfile",
+                "x": 301.9285714285715,
+                "y": 598.5357142857144
+            }
+        ],
+        "links": [
+            {
+                "name": "MeshIn",
+                "source": "entity",
+                "target": "GetURL"
+            },
+            {
+                "name": "GetURL",
+                "source": "entity",
+                "target": "PrependBaseDir"
+            },
+            {
+                "name": "PrependBaseDir",
+                "source": "entity",
+                "target": "IsRoot"
+            },
+            {
+                "name": "IsRoot",
+                "source": "entity",
+                "target": "AddIndexHTML"
+            },
+            {
+                "name": "AddIndexHTML",
+                "source": "entity",
+                "target": "LoadFile"
+            },
+            {
+                "name": "LoadFile",
+                "source": "entity",
+                "target": "MeshOut"
+            },
+            {
+                "name": "IsRoot",
+                "source": "fail",
+                "target": "LoadFile"
+            }
+        ],
+        "attributeLinks": [],
+        "scale": 0.7000000000000001
+    }
+}

@@ -1,0 +1,109 @@
+[
+	{
+		"name": "and",
+		"publish": true,
+		"entity": true
+	},
+	{
+		"name": "chain",
+		"publish": true,
+		"entity": true
+	},
+	{
+		"name": "connect",
+		"publish": true,
+		"entity": true,
+		"params": {
+			"targetChannel": {
+				"type": "channel"
+			}
+		}
+	},
+	{
+		"name": "console_log",
+		"publish": true,
+		"entity": true
+	},
+	{
+		"name": "filter",
+		"publish": true,
+		"entity": true
+	},
+	{
+		"name": "foreach",
+		"publish": true,
+		"entity": true
+	},
+	{
+		"name": "get",
+		"publish": true,
+		"entity": true,
+		"params":{
+			"attribute":{
+				"type": "string"
+			}
+		}
+	},
+	{
+		"name": "http",
+		"publish": true,
+		"entity": true,
+		"params":{
+			"host":{
+				"type": "Text"
+			},
+			"port": {
+				"type":"Number"
+			},
+			"webroot": {
+				"type":"Text"
+			}
+		}
+	},
+	{
+		"name": "mesh",
+		"publish": true,
+		"entity": true
+	},
+	{
+		"name": "meshfilter",
+		"publish": true,
+		"entity": true
+	},
+	{
+		"name": "morph",
+		"publish": true,
+		"entity": true,
+		"params":{
+			"map": {
+				"type": "object"
+			},
+			"targetModel": {
+				"type": "model"
+			}
+		}
+	},
+	{
+		"name": "set",
+		"publish": true,
+		"entity": true
+	},
+	{
+		"name": "stdin",
+		"publish": true,
+		"entity": true
+	},
+	{
+		"name": "stdout",
+		"publish": true,
+		"entity": true
+	},
+	{
+		"name": "udf",
+		"publish": true,
+		"entity": true
+	},
+	{
+		"name": "HTTP_SendFile"
+	}
+]

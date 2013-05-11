@@ -1,0 +1,891 @@
+<html>
+	<head>
+		
+		<style>
+			body{
+				font-family:sans-serif;
+				font-size: 10px;
+			}
+			ul{
+				margin:0;
+				padding: 0;
+				list-style-type: none;
+			}
+			
+			ul li.channel_launcher{
+				cursor: pointer;
+				list-style-type: none;
+				margin: 0;
+				/*width: 100px;
+				height: 30px;
+				border: 1px solid blue;
+				margin-bottom: 10px;
+				text-align: center;*/
+				
+			}
+			
+			/*ul li.channel_launcher:hover{
+				background-color: #AAA;
+				
+			}*/
+			
+			ul li.channel_launcher ul li.channel_launcher{
+				list-style-type: none;
+				padding-left: 10px;
+			}
+			
+			#toolsPanel{
+				float:left;
+				margin-right:10px;
+				width: 150px;
+				height: 852px;
+			}
+			
+			#meshPanel{
+				float:left;
+				margin-right:10px;
+				width: 832px;
+			}
+			
+			#toolsPanel div.tabContent{
+				width: 180px; 
+				height: 780px;
+				overflow: auto;
+				padding: 10px;
+			}
+			#renderPanel_wrapper{
+				width: 630px;
+				height: 855px;
+				overflow:auto;
+				float:left;
+			}
+			#renderPanel_script {
+				
+			}
+			
+			
+			#meshUL li .ui-icon-close { float: left; margin: 0.4em 0.2em 0 0; cursor: pointer; }
+		</style>
+		<link rel="stylesheet" href="http://code.jquery.com/ui/1.10.2/themes/smoothness/jquery-ui.css"/>
+		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+		<script src="http://code.jquery.com/ui/1.10.2/jquery-ui.js"></script>
+		<script src="http://d3lp1msu2r81bx.cloudfront.net/kjs/js/lib/kinetic-v4.4.1.min.js"></script>
+		<script src="./lib/ide/eventemitter2/lib/eventemitter2.js"></script>
+		<script src="./lib/ide/channel.js"></script>
+		<script src="./lib/ide/editor.js"></script>
+	</head>
+	<body>
+		<div id="toolsPanel">
+			<ul>
+				<li><a href="#channelList" title="Channels"><img src="./images/shape_square.png"/></a></li>
+				<li><a href="#meshList" title="Meshes"><img src="./images/chart_organisation.png"/></a></li>
+				<li><a href="#modelList" title="Models"><img src="./images/table.png"/></a></li>
+			</ul>
+			
+			<div id="channelList" class="tabContent"></div>
+			<div id="meshList" class="tabContent">
+				<ul id="meshListUL">
+					
+				</ul>
+			</div>
+			<div id="modelList" class="tabContent"></div>
+		</div>
+		
+		<div id="meshPanel">
+			<ul id="meshUL">
+				<li id="appLI"><a href="#App_Panel" title="App">App</a></li>
+				<li id="newMeshLI"><a href="#newmesh" title="Create New Mesh" onclick="addEditor();return false;">New</a></li>
+			</ul>
+			<div id="App_Panel">
+				<div id="App_editor" style="width: 800px;"></div>		
+			</div>
+			<div id="newmesh">
+				<div id="newone"></div>
+			</div>
+		</div>
+		<div id="renderPanel_wrapper">
+			<ul>
+				<li><a href="#renderPanel_project" title="Project Configuration">Project</a></li>
+				<li><a href="#renderPanel_script" title="Script Configuration">Script</a></li>
+				<li><a href="#renderPanel_load" title="Load Project">Load Project</a></li>
+			</ul>
+			<div id="renderPanel_project" class="tabContent"></div>
+			<div id="renderPanel_script" class="tabContent"></div>
+			<div id="renderPanel_load" class="tabContent">
+				<span>Path: </span>
+				<input type="text" id="projectname"/>
+				<input type="button" id="loadProject" onclick="loadProject();" value="Load"/><input type="button" id="saveProject" onclick="saveProject();" value="Save"/><br/><br/>
+				<input type="button" id="testProject" onclick="testProject();" value="Test"/>&nbsp;
+				<input type="button" id="stopTest" onclick="stopTest();" value="Stop Test"/><br/><br/>
+			</div>
+		</div>
+		
+		 <script defer="defer">
+		 	var activeEditor = false;
+		 	var editors = {
+		    	App: new mesh_editor({
+			    	container: 'App_editor',
+			    	name: 'App'
+			    })	
+		    };
+		 	
+		 	editors.App.onAny(function(channel){
+		 		channelList._App.App = this.getScript();
+		 		$('#renderPanel_script').html(JSON.stringify(channelList._App, null, 4).replace(/\n/g, '<br/>').replace(/    /g,"&nbsp;&nbsp;&nbsp;&nbsp;"));
+		 		
+		 		var output = getProjectConfig();
+		 		$('#renderPanel_project').html(JSON.stringify(output, null, 4).replace(/\n/g, '<br/>').replace(/    /g,"&nbsp;&nbsp;&nbsp;&nbsp;"));
+		 	});
+		 	
+			var tabContent = $( "#meshPanel" ),
+			//tabTemplate = "<li><a href='#{href}'>#{label}</a> <span class='ui-icon ui-icon-close' role='presentation'>Remove Tab</span></li>",
+			tabTemplate = "<li><a href='#{href}'>#{label}</a></li>",
+			tabCounter = 2;
+			
+		  	$(function() {
+				$( "#toolsPanel" ).tabs();
+				tabs = $( "#meshPanel" ).tabs({
+					activate: function(evt, cfg){
+						var name = cfg.newTab.find('a').text()
+						activeEditor = editors[name];
+					}
+				});
+				$( "#renderPanel_wrapper" ).tabs();
+				 // close icon: removing the tab on click
+				tabs.delegate( "span.ui-icon-close", "click", function() {
+					var panelId = $( this ).closest( "li" ).remove().attr( "aria-controls" );
+					$( "#" + panelId ).remove();
+					tabs.tabs( "refresh" );
+				});
+			});
+			
+		 	var channelList = false;
+		 	
+		    $.getJSON('/lib/channel_list.json', function(channels){
+		    	channelList = channels;
+		    	
+			    channelList._App = {
+			    	App: editors.App.getScript()
+			    };
+				
+		    	var ulHTML = '<ul>';
+		    	for(var chanName in channels){
+		    		if(chanName!='_App'){
+			    		var chanCfg = channels[chanName];
+			    		
+			    		if((typeof channels[chanName])=='object' && channels[chanName].isChannelList){
+			    			ulHTML += '<li class="channel_launcher">'+chanName;
+			    			ulHTML+='<ul>';
+			    			for(var subChanName in channels[chanName]){
+			    				if(subChanName!='name' && subChanName!='isChannelList'){
+			    					ulHTML += '<li class="channel_launcher" onclick="addChannelToStage(\''+channels[chanName][subChanName].name+'\');\">'+(channels[chanName][subChanName].label?channels[chanName][subChanName].label:channels[chanName][subChanName].name)+'</li>';
+			    				}
+			    				
+			    			}
+			    			
+			    			ulHTML+='</ul></li>';
+			    		}else{
+			    			ulHTML += '<li class="channel_launcher" onclick="addChannelToStage(\''+channels[chanName].name+'\');\">'+channels[chanName].name+'</li>';	
+			    		}
+		    		}
+		    	}
+		    	ulHTML+='</ul>';
+		    	$('#channelList').html(ulHTML);
+		    	
+		    	$('#renderPanel_script').html(JSON.stringify(channelList._App, null, 4).replace(/\n/g, '<br/>').replace(/    /g,"&nbsp;&nbsp;&nbsp;&nbsp;"));
+				var output = getProjectConfig();
+		 		$('#renderPanel_project').html(JSON.stringify(output, null, 4).replace(/\n/g, '<br/>').replace(/    /g,"&nbsp;&nbsp;&nbsp;&nbsp;"));
+		    	
+		    });
+		    
+		    
+		    
+		    activeEditor = editors.App;
+		    
+		    function addEditor(name){
+		    	if(!name){
+		    		name=prompt("Mesh Name");	
+		    	}
+		    	
+		    	addTab(name);
+		    	
+		    	editors[name] = new mesh_editor({
+		    		name: name,
+					container: name+'_editor'
+				});
+				
+				tabs.tabs( "option", "active", $('#meshUL li').length-2);
+				activeEditor = editors[name];
+				
+				$('#meshListUL').append('<li  onclick="addChannelToStage(\'_App.'+name+'\');\">'+name+'</li>');
+				
+				channelList._App[name] = editors[name].getScript();
+				
+				editors[name].onAny(function(edName){
+					return function(channel){
+						//var mesh = channelList._App[edName];
+			 			channelList._App[edName] = this.getScript();
+			 			$('#renderPanel_script').html(JSON.stringify(channelList._App, null, 4).replace(/\n/g, '<br/>').replace(/    /g,"&nbsp;&nbsp;&nbsp;&nbsp;"));
+			 			
+			 			var output = getProjectConfig();
+		 				$('#renderPanel_project').html(JSON.stringify(output, null, 4).replace(/\n/g, '<br/>').replace(/    /g,"&nbsp;&nbsp;&nbsp;&nbsp;"));
+					}
+			 	}(name));
+			 	
+			 	$('#renderPanel_script').html(JSON.stringify(channelList._App, null, 4).replace(/\n/g, '<br/>').replace(/    /g,"&nbsp;&nbsp;&nbsp;&nbsp;"));
+			 	
+				var output = getProjectConfig();
+		 		$('#renderPanel_project').html(JSON.stringify(output, null, 4).replace(/\n/g, '<br/>').replace(/    /g,"&nbsp;&nbsp;&nbsp;&nbsp;"));
+		    }
+		    
+		     function addTab(label) {
+				
+				id = label+"_Panel",
+				li = $( tabTemplate.replace( /#\{href\}/g, "#" + id ).replace( /#\{label\}/g, label ) ),
+				tabContentHtml = tabContent.val() || "Tab " + tabCounter + " content.";
+				tabs.find( ".ui-tabs-nav #newMeshLI" ).before( li );
+				tabs.append( "<div id='" + id + "'><div id=\""+label+"_editor\"></div></div>" );
+				tabs.tabs( "refresh" );
+				tabCounter++;
+				
+			}
+		    
+		    function switchEditor(name){
+		 		if(name=='container'){
+		 			activeEditor = editor;
+		 		}else{
+		 			activeEditor = editor;
+		 		}
+		 	}
+		    
+		    function addChannelToStage(typeName){
+		    	var chanType = false;
+		    	var chanCfg = {}
+		    	if((typeof typeName)=='object'){
+		    		chanCfg = typeName;
+		    		chanCfg.type = getChannel(typeName.type)?getChannel(typeName.type):typeName.type
+		    	}else{
+		    		var chanName = prompt('Enter a channel Name');
+		    		
+		    		chanCfg = {
+			    		name: chanName,
+			    		type: getChannel(typeName)?getChannel(typeName):typeName
+			    	}
+		    	}
+		    	
+		    	activeEditor.addChannel(chanCfg);
+		    }
+		    
+		    function getChannel(typeName){
+		    	console.log('GETTING CHANNEL:', typeName);
+		    	if(typeName.indexOf('.')!=-1){
+		    		
+		    		var chanParts = typeName.split('.');
+		    		var parent = channelList[chanParts[0]];
+		    		chanType = parent[chanParts[1]];
+		    	}else{
+		    		console.log(channelList[typeName]);
+		    		chanType = channelList[typeName];	
+		    	}
+		    	return chanType
+		    }
+		    
+		    function getProjectConfig(){
+		    	var output = {};
+		 			for(var editorName in editors){
+		 				output[editorName] = {
+		 					name: editorName,
+		 					extend: 'mesh',
+		 					channels:[],
+		 					links:[],
+		 					attributeLinks:[]
+		 				}
+		 				var currentEditor = editors[editorName];
+		 				output[editorName].scale = currentEditor.getScale();
+		 				
+		 				var editorOP = JSON.parse(currentEditor.stage.toJSON());
+		 				var editorScript = currentEditor.getScript();
+		 				
+		 				var shapesLayer = currentEditor.shapesLayer;
+		 				
+		 				for(var i=0;i<editorScript.channels.length;i++){
+		 					var currentChannel = editorScript.channels[i];
+		 					for(var j=0;j<shapesLayer.children.length;j++){
+		 						if(shapesLayer.children[j].attrs.name==currentChannel.name){
+		 							var pos = shapesLayer.children[j].getPosition();
+		 							currentChannel.x = pos.x;
+		 							currentChannel.y = pos.y; 
+		 						}
+		 					}
+		 					output[editorName].channels.push(currentChannel);
+		 				}
+		 				
+		 				for(var i=0;i<editorScript.links.length;i++){
+		 					output[editorName].links.push(editorScript.links[i]);
+		 				}
+		 				
+		 				for(var i=0;i<editorScript.attributeLinks.length;i++){
+		 					output[editorName].attributeLinks.push(editorScript.attributeLinks[i]);
+		 				}
+		 				//console.log(editorOP);
+		 			}
+		 			
+		 			return output;
+		    }
+		    
+		    function loadProject(filepath){
+		    	if(!filepath){
+		    		filepath = $('#projectname').val();	
+		    	}
+		    	
+		    	$.getJSON(filepath, function(appCfg){
+			    	console.log(appCfg);
+			    	
+			    	//first add all the tabs so the user created meshes are added to the local channel lsit
+			    	for(var meshName in appCfg){
+			    		//create the ditor if it doesn't already exist
+			    		if(!editors[meshName]){
+			    			addEditor(meshName);
+			    		}
+			    	}
+			    	
+			    	for(var meshName in appCfg){
+			    		//active the editor
+			    		activeEditor = editors[meshName];
+			    		//get the channel list
+			    		var meshCfg = appCfg[meshName];
+			    		if(meshCfg.scale){
+			    			activeEditor.setScale(meshCfg.scale);
+			    		}
+			    		for(var chanIdx=0;chanIdx<meshCfg.channels.length;chanIdx++){
+			    			var channelCfg = meshCfg.channels[chanIdx];
+			    			if(channelCfg.name!='MeshIn' && channelCfg.name!='MeshOut'){//mesh in and meshout are automatically added by the editor]
+			    				var chanClass = getChannel(channelCfg.type);
+			    				for(var chanKey in chanClass){
+			    					//add the property if it doesn't already exist
+			    					if(!channelCfg[chanKey]){
+			    						//channelCfg[chanKey] = chanClass[chanKey];
+			    					}
+			    				}
+			    				addChannelToStage(channelCfg);
+			    			}
+			    		}
+			    		
+			    		for(var linkIdx=0;linkIdx<meshCfg.links.length;linkIdx++){
+			    			var linkCfg = meshCfg.links[linkIdx];
+			    			
+			    			activeEditor.addLink(linkCfg.name, linkCfg.source, linkCfg.target);
+			    		}
+			    		
+			    		for(var linkIdx=0;linkIdx<meshCfg.attributeLinks.length;linkIdx++){
+			    			var linkCfg = meshCfg.attributeLinks[linkIdx];
+			    			
+			    			activeEditor.addAttributeLink(linkCfg.name, linkCfg.source, linkCfg.attribute, linkCfg.target);
+			    		}
+			    	}
+			    	tabs.tabs( "option", "active", 0);
+			    	$('#renderPanel_wrapper').tabs( "option", "active", 0);
+			    });
+		    }
+		    
+		    function testProject(){
+		    	var projectCfg = getProjectConfig();
+		    	var post = {
+		    		appCfg: JSON.stringify(projectCfg)
+		    	}
+		    	
+		    	$.post('/actions/test', post, function(data) {
+					console.log(data);
+				});
+		    }
+		    
+		    function stopTest(){
+		    	$.get('/actions/stop', function(data) {
+					console.log(data);
+				});
+		    }
+		    
+		    window.addEventListener('keypress', function(e){
+		 		//escape key
+		 		if(e.keyCode==27){
+		 			activeEditor.deselect();
+		 		}
+		 		
+		 		//delete key
+		 		if(e.charCode==0 && e.keyCode==8 && (activeEditor.selectedChannel || activeEditor.selectedLink)){
+		 			if(activeEditor.selectedLink){
+		 				activeEditor.removeLink(activeEditor.selectedLink);
+		 			}
+		 			
+		 			if(activeEditor.selectedAttributeLink){
+		 				activeEditor.removeAttributeLink(activeEditor.selectedAttribtueLink);
+		 			}
+
+					if(activeEditor.selectedChannel){
+						try{
+							activeEditor.removeChannel(activeEditor.selectedChannel);	
+						}catch(e){
+							console.log(e);
+							alert('error');
+						}
+						
+					}
+		 			e.preventDefault();
+		 			return false;
+		 		}
+		 		
+		 		//"Shift+r" key, render
+		 		if(e.charCode==82){
+		 			//console.log(stage.toJSON());
+		 			$('#renderPanel_script').html(JSON.stringify(channelList._App, null, 4).replace(/\n/g, '<br/>').replace(/    /g,"&nbsp;&nbsp;&nbsp;&nbsp;"));
+		 		}
+		 		
+		 		//"Shift+r"p key, render
+		 		if(e.charCode==80){
+		 			var output = getProjectConfig();
+		 			$('#renderPanel_project').html(JSON.stringify(output, null, 4).replace(/\n/g, '<br/>').replace(/    /g,"&nbsp;&nbsp;&nbsp;&nbsp;"));
+		 			e.preventDefault();
+		 			return false;
+		 		}
+		 		
+		 		//"-" key, zoom in
+		 		if(e.charCode==45){
+		 			activeEditor.setScale(activeEditor.getScale()-0.1);
+		 			$('#renderPanel_script').html(JSON.stringify(channelList._App, null, 4).replace(/\n/g, '<br/>').replace(/    /g,"&nbsp;&nbsp;&nbsp;&nbsp;"));
+		 			var output = getProjectConfig();
+		 			$('#renderPanel_project').html(JSON.stringify(output, null, 4).replace(/\n/g, '<br/>').replace(/    /g,"&nbsp;&nbsp;&nbsp;&nbsp;"));
+		 		}
+		 		
+		 		//"=" key, zoom out
+		 		if(e.charCode==61){
+		 			activeEditor.setScale(activeEditor.getScale()+0.1);
+		 			$('#renderPanel_script').html(JSON.stringify(channelList._App, null, 4).replace(/\n/g, '<br/>').replace(/    /g,"&nbsp;&nbsp;&nbsp;&nbsp;"));
+		 			var output = getProjectConfig();
+		 			$('#renderPanel_project').html(JSON.stringify(output, null, 4).replace(/\n/g, '<br/>').replace(/    /g,"&nbsp;&nbsp;&nbsp;&nbsp;"));
+		 		}
+		 		console.log(e);
+		 		//e.preventDefault();
+		 		//return false;
+		 	});
+		    
+		 	/*
+		 	var lineStart = false;
+		 	var startChan = false;
+		 	
+		 	var line = false;
+		 	
+		 	var links = [];
+		 	var channels = [];
+		 	
+		    var stage = new Kinetic.Stage({
+		        container: 'container',
+		        width: 800,
+		        height: 800,
+	            stroke: 'black',
+	        	strokeWidth: 2
+		    });
+		    
+		    var shapesLayer = new Kinetic.Layer({
+		 		width: stage.getWidth(),
+		 		height: stage.getHeight()
+		 	});
+		    
+		 	var lineLayer = new Kinetic.Layer({
+		 		width: stage.getWidth(),
+		 		height: stage.getHeight()
+		 	});
+		 	
+		    var bgLayer = new Kinetic.Layer({
+		    	name: "EditorBG"
+		    });
+		    
+		    var bgRect = new Kinetic.Rect({
+		    	width: stage.getWidth(),
+		    	height: stage.getHeight(),
+	            fill: '#D8D8D8',
+	            stroke: 'black',
+	            strokeWidth: 2
+		    });
+		    
+		 	var selectedNode = false;
+		 	var selectedLine = false;
+		 	
+		 	window.addEventListener('keypress', function(e){
+		 		//escape key
+		 		if(e.charCode==96){
+		 			selectedNode=false;
+		 		}
+		 		
+		 		//delete key
+		 		if(e.charCode==0 && e.keyCode==8 && (selectedNode || selectedLine)){
+		 			if(selectedLine){
+		 				removeLink();
+		 			}else{
+		 				removeChannel();
+		 			}
+		 			e.preventDefault();
+		 			return false;
+		 		}
+		 		
+		 		//"r" key, render
+		 		if(e.charCode==114){
+		 			console.log(stage.toJSON());
+		 			renderScript();
+		 		}
+		 		
+		 		//"-" key, zoom in
+		 		if(e.charCode==45){
+		 			shapesLayer.setScale(shapesLayer.getScale().x-0.1);
+		 			shapesLayer.draw();
+		 			shapesLayer.fire('scaled',{});
+		 			lineLayer.setScale(lineLayer.getScale().x-0.1);
+		 			lineLayer.draw();
+		 			lineLayer.fire('scaled',{});
+		 		}
+		 		
+		 		//"=" key, zoom out
+		 		if(e.charCode==61){
+		 			shapesLayer.setScale(shapesLayer.getScale().x+0.1);
+		 			shapesLayer.draw();
+		 			shapesLayer.fire('scaled',{});
+		 			lineLayer.setScale(lineLayer.getScale().x+0.1);
+		 			lineLayer.draw();
+		 			lineLayer.fire('scaled',{});
+		 		}
+		 		
+		 		console.log(e);
+		 	});
+		    
+		    function renderScript(){
+		    	var chanConfig = [];
+		 			for(var i=0;i<channels.length;i++){
+		 				var chan = channels[i];
+		 				var chanItem = {};
+		 				chanItem.name = chan.name;
+		 				chanItem.type = chan.typeName;
+		 				var chanParams = chan.getChannelParams();
+		 				
+		 				for(var paramKey in chanParams){
+		 					chanItem[paramKey] = chanParams[paramKey];
+		 				}
+		 				
+		 				chanConfig.push(chanItem);
+		 			}
+		 			var linkConfig = [];
+		 			for(var i=0;i<links.length;i++){
+		 				var link = {};
+		 				
+		 				link.name = links[i].sourceChan.name;
+		 				link.source = links[i].sourceOutput.name;
+		 				link.target = links[i].targetChan.name;
+		 				linkConfig.push(link);
+		 			}
+		 			
+		 			var outputObj = {
+		 				type: 'mesh',
+		 				channels: chanConfig,
+		 				links: linkConfig
+		 			}
+		 			
+		 			$('#renderPanel_script').html(JSON.stringify(outputObj, null, 4).replace(/\n/g, '<br/>').replace(/    /g,"&nbsp;&nbsp;&nbsp;&nbsp;"));
+		    }
+		    
+		    function addLink(sourceChan, targetChan){
+		    	
+		    	var sourcePos = lineStart;//sourceChan.getPosition();
+		    	var targetPos = targetChan.getPosition();
+		    	
+	    		targetPos.x+=20;
+	    		targetPos.y+=10;	
+	    		
+		    	var newLine = new Kinetic.Line({
+		    		stroke: 'black',
+				    strokeWidth: 2,
+				    lineCap: 'round',
+				    lineJoin: 'round',
+		            points: [sourcePos.x, sourcePos.y, targetPos.x, targetPos.y]
+		    	});
+		    	console.log(newLine);
+		    	newLine.on('mousedown', function(){
+		    		
+		    		if(selectedLine){
+		    			selectedLine.setStroke('#000');
+				    	lineLayer.draw();
+		    			selectedLine = false;
+		    		}else{
+		    			if(selectedLine!=this){
+			    			console.log('SETTING');
+			    			selectedLine = this;
+				    		selectedLine.setStroke('red');
+				    		lineLayer.draw();
+			    		}else{
+			    			selectedLine.setStroke('#000');
+				    		lineLayer.draw();
+		    				selectedLine = false;
+			    		}
+		    		}		    		
+		    	});
+		    	
+		    	newLine.on('mouseover', function(){
+		    		
+		    		$('body').css( 'cursor', 'pointer' );
+		    	});
+		    	
+		    	newLine.on('mouseout', function(){
+		    		$('body').css( 'cursor', 'default' );
+		    	});
+		    	
+		    	var link = {
+		    		sourceChan: sourceChan,
+		    		sourceOutput: startOutput,
+		    		targetChan: targetChan,
+		    		line: newLine
+		    	};
+		    	
+		    	sourceChan.on('dragmove', function(){
+		    		var sourcePos = sourceChan.getPosition();
+			    	sourcePos.x+=20;
+			    	sourcePos.y+=130;
+			    	
+		    		newLine.getPoints()[0].x = sourcePos.x;
+                    newLine.getPoints()[0].y = sourcePos.y;
+                    lineLayer.draw();
+		    	});
+		    	
+		    	targetChan.on('dragmove', function(){
+		    		var targetPos = targetChan.getPosition();
+			    	targetPos.x+=20;
+			    	targetPos.y+=10;
+			    	
+		    		newLine.getPoints()[1].x = targetPos.x;
+                    newLine.getPoints()[1].y = targetPos.y;
+                    lineLayer.draw();
+		    	});
+		    	
+		    	links.push(link);
+		    	
+		    	lineLayer.add(newLine);
+		    	lineLayer.draw();
+		    	lineStart = false;
+		    	startChan = false;
+		    	renderScript();
+		    }
+		    
+		    function addChannelToStage(typeName){
+		    	var chanType = false;
+		    	for(var channelName in channelList){
+		    		if(channelList[channelName].name==typeName){
+		    			
+		    			chanType = channelList[channelName];
+		    			
+		    			continue;
+		    		}
+		    	}
+		    	
+		    	var chanName = prompt('Enter a channel Name');
+		    	
+		    	var chan = new channel({
+		    		name: chanName,
+		    		type: chanType
+		    	});
+		    	
+		    	chan.on('input_mousedown', function(ip,ev){
+		    		
+		    		line.remove();
+		    		line = false;
+		    		addLink(startChan, chan);
+		    	});
+		    	
+		    	chan.on('output_mousedown', function(output){
+		    		
+		    		startChan = this;
+		    		startOutput = output;
+		    		var groupPos = this.getPosition();
+		    		var outputPos = output.getPosition();
+		    		groupPos.x+=outputPos.x+(output.getWidth()/2);
+		    		groupPos.y+=outputPos.y+(output.getHeight()/2);
+		    		lineStart = groupPos;
+		    	});
+		    	
+		    	chan.on('node_selected', function(node){
+		    		if(selectedLine){
+		    			selectedLine.setStroke('#000');
+		    			lineLayer.draw();
+		    			selectedLine = false;
+		    		}
+		    		if(selectedNode){
+		    			selectedNode.content.setShadowColor('#000');
+		    		}
+		    		selectedNode = node;
+		    		selectedNode.content.setShadowColor('red');
+		    	});
+		    	
+		    	chan.on('param_set', function(params){
+		    		console.log('Attribute Set: '+params[0]);
+		    		console.log(params[1]);
+		    	});
+		    	
+		    	channels.push(chan);
+		    	
+		    	shapesLayer.add(chan);
+		    	shapesLayer.draw();
+		    	renderScript();
+		    }
+		    
+		    function removeLink(){
+		    	for(var i=0;i<links.length;i++){
+ 					if(links[i].line==selectedLine){
+ 						links.splice(i, 1);
+ 						continue;
+ 					}
+ 				}
+ 				selectedLine.remove();
+ 				selectedLine = false;
+ 				lineLayer.draw();
+ 				renderScript();
+		    }
+		    
+		    
+		    function removeChannel(){
+		    	var i = links.length;
+ 				while(i--){
+ 					if(links[i].sourceChan==selectedNode || links[i].targetChan==selectedNode){
+ 						links[i].line.remove();
+ 						links.splice(i);
+ 					}
+ 				}
+ 				
+ 				lineLayer.draw();
+ 				
+ 				for(var i=0;i<channels.length;i++){
+ 					if(channels[i]==selectedNode){
+ 						channels.splice(i,1);
+ 						continue;
+ 					}
+ 				}
+ 				
+ 				selectedNode.remove();
+ 				selectedNode = false;
+ 				shapesLayer.draw();
+ 				renderScript();
+		    }
+		    
+		    bgRect.on('mousemove', function(){
+	          	if(lineStart!==false){
+		          	if(!line){
+		          		line = new Kinetic.Line({
+				            stroke: 'black',
+						    strokeWidth: 2,
+						    lineCap: 'round',
+						    lineJoin: 'round',
+				            points: [lineStart.x, lineStart.y, lineStart.x+1, lineStart.y+1]
+			            });
+		          		lineLayer.add(line);
+		          	}
+		          	
+					var scaledHeight = 800*lineLayer.getScale().y;
+		    		var scaledUnit = 800/scaledHeight;
+		    		
+		          	var mousePos = stage.getMousePosition();
+		          	var layerPos = lineLayer.getPosition();
+		          	
+		          	line.getPoints()[1].x = (mousePos.x-layerPos.x)*scaledUnit;
+                    line.getPoints()[1].y = (mousePos.y-layerPos.y)*scaledUnit;
+                    
+		          	lineLayer.drawScene();
+	          	}
+		    });
+		    
+	    	var meshIn = new channel({
+	    		name: 'MeshIn',
+	    		type: 'MeshIn',
+	    		publish: false,
+	    		x: 20,
+	    		y: 20
+	    	});
+	    	
+	    	meshIn.publishInput.on('mousedown', function(){
+	    		
+	    		line.remove();
+	    		addLink(startChan, meshIn);
+	    		line = false;
+	    	});
+	    	
+	    	meshIn.entityOutput.on('mousedown', function(evt){
+	    		startChan = meshIn;
+	    		
+		    	var groupPos = meshIn.getPosition();
+		    	groupPos.x+=20;
+		    	groupPos.y+=110;
+	          	lineStart = groupPos;
+	        });
+	        
+	        var meshOut = new channel({
+	    		name: 'MeshOut',
+	    		type: 'MeshOut',
+	    		entity: false,
+	    		x: 20,
+	    		y: 660
+	    	});
+	    	
+	    	meshOut.on('input_mousedown', function(ip){
+	    		
+	    		line.remove();
+	    		line = false;
+	    		addLink(startChan, this);
+	    	});
+	    	
+	    	meshOut.on('output_mousedown', function(op, evt){
+	    		startChan = this;
+	    		startOutput = output;
+	    		var groupPos = this.getPosition();
+	    		var outputPos = output.getPosition();
+	    		groupPos.x+=outputPos.x+(output.getWidth()/2);
+	    		groupPos.y+=outputPos.y+(output.getHeight()/2);
+	    		lineStart = groupPos;
+	        });
+	    	
+	    	
+		    shapesLayer.add(meshIn);
+		    shapesLayer.add(meshOut);
+		    
+		    bgLayer.add(bgRect);
+		    
+		    stage.add(bgLayer);
+		    stage.add(lineLayer);
+		    stage.add(shapesLayer);
+		    
+		    bgLayer.setZIndex(10);
+		    lineLayer.setZIndex(30);
+		    shapesLayer.setZIndex(50);
+		    
+		    var lastPos;
+		    
+		    bgRect.on('mousedown', function(){
+		    	lastPos = stage.getMousePosition();
+		    });
+		    
+		    bgRect.on('mousemove', function(){
+		    	if(lastPos){
+		    		var newPos = stage.getMousePosition();
+		    		shapesLayer.setPosition({
+		    			x: shapesLayer.getX()-((lastPos.x-newPos.x)),
+		    			y: shapesLayer.getY()-((lastPos.y-newPos.y))
+		    		});
+		    		shapesLayer.draw();
+		    		lineLayer.setPosition({
+		    			x: lineLayer.getX()-((lastPos.x-newPos.x)),
+		    			y: lineLayer.getY()-((lastPos.y-newPos.y))
+		    		});
+		    		lineLayer.draw();
+		    		lastPos = newPos;
+		    	}
+		    });
+		    
+		    bgRect.on('mouseup', function(){
+		    	lastPos = false;
+		    });
+		    */
+		   </script>
+	</body>
+</html>

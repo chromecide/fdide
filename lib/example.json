@@ -1,0 +1,132 @@
+{
+    "App": {
+        "name": "App",
+        "extend": "mesh",
+        "channels": [
+            {
+                "name": "MeshIn",
+                "type": "MeshIn",
+                "x": 20,
+                "y": 20
+            },
+            {
+                "name": "MeshOut",
+                "type": "MeshOut",
+                "x": 20,
+                "y": 660
+            },
+            {
+                "name": "aasddd",
+                "type": "get",
+                "x": 73,
+                "y": 308
+            },
+            {
+                "name": "ddddd",
+                "type": "set",
+                "x": 678,
+                "y": 637
+            },
+            {
+                "name": "asdfsadf",
+                "type": "meshfilter",
+                "x": 461,
+                "y": 67
+            },
+            {
+                "name": "asdf",
+                "type": "trster",
+                "x": 614,
+                "y": 305
+            }
+        ],
+        "links": [
+            {
+                "name": "MeshIn",
+                "source": "entity",
+                "target": "aasddd"
+            },
+            {
+                "name": "aasddd",
+                "source": "entity",
+                "target": "MeshOut"
+            },
+            {
+                "name": "asdfsadf",
+                "source": "entity",
+                "target": "aasddd"
+            },
+            {
+                "name": "asdf",
+                "source": "entity",
+                "target": "ddddd"
+            }
+        ],
+        "attributeLinks": [
+            {
+                "name": "aasddd",
+                "attribute": "attribute",
+                "target": "ddddd"
+            }
+        ]
+    },
+    "trster": {
+        "name": "trster",
+        "extend": "mesh",
+        "channels": [
+            {
+                "name": "MeshIn",
+                "type": "MeshIn",
+                "x": 20,
+                "y": 20
+            },
+            {
+                "name": "MeshOut",
+                "type": "MeshOut",
+                "x": 20,
+                "y": 660
+            },
+            {
+                "name": "herio",
+                "type": "meshfilter",
+                "x": 309,
+                "y": 115
+            },
+            {
+                "name": "sdfsdf",
+                "type": "stdin",
+                "x": 629,
+                "y": 240
+            },
+            {
+                "name": "adsdfsadf",
+                "type": "get",
+                "x": 342,
+                "y": 364
+            }
+        ],
+        "links": [
+            {
+                "name": "MeshIn",
+                "source": "entity",
+                "target": "herio"
+            },
+            {
+                "name": "herio",
+                "source": "entity",
+                "target": "sdfsdf"
+            },
+            {
+                "name": "sdfsdf",
+                "source": "entity",
+                "target": "adsdfsadf"
+            },
+            {
+                "name": "adsdfsadf",
+                "source": "entity",
+                "target": "MeshOut"
+            }
+        ],
+        "attributeLinks": []
+    }
+}
