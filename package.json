@@ -1,0 +1,30 @@
+{
+  "name": "fdide",
+  "version": "0.1.1",
+  "description": "Channel Mesh Editor for FluxData",
+  "homepage": "https://github.com/chromecide/fdide",
+  "keywords": [
+    "FluxData",
+    "events",
+    "event-driven",
+    "framework",
+    "channels",
+    "channel",
+    "FluxData-Channel",
+    "IDE"
+  ],
+  "author": {
+    "name": "Justin Pradier",
+    "email": "chromecide@chromecide.com",
+    "url": "http://chromecide.com/"
+  },
+  "dependencies": {
+  	"eventemitter2":"0.4.x",
+  	"request": "2.12.x"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chromecide/fdide.git"
+  },
+  "main": "index.js"
+}
